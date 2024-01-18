@@ -92,11 +92,83 @@ the appropriate resource.
 The `resp` message type is a message sent by the server as a response to a
 [`req` message type](#the-req-message-type) from the client.
 
-I will write `resp` message types like this:
+In this doc, I will write `resp` message types like this:
 
 ```
+-> req  Product { id: 10 }
 <- resp Product { id: 10 } = { title: "...", desc: "...", price: 5 }
 ```
+
+`resp` are written with its corresponding `req` notation right before the equal sign.
+Notice how req has the content `Product { id: 10 }` and resp has the same data, but
+it has "resolved" the resource which is indicated by the equal sign, followed by its
+resource's actual data.
+
+#### Caching
+
+As we've discussed previously in [`req`'s Idempotence and Caching](#idempotence-and-caching),
+the indication that we've talked about not only mean that the server "resolved" the
+request that the client sent. But also a "cache key" for the client to save for later
+use.
+
+#### Payload
+
+The payload of a `resp` message is similar to a `req`'s key-value store style, JSON-like
+structure. Though a `resp` could include some special values: `req`, `resp` and `disp`.
+
+Yes, it could include message types. For what purpose? Well, let's see them in the following
+request-response flow:
+
+```
+-> req  ProductList {}
+<- resp ProductList {} = [req Product { id: 10 }, resp Product { id: 11 } = ...]
+```
+
+Woah, what's this all about?
+
+With SEKUL, you could define relations using types. Here, `resp ProductList` returns a
+`Product[]`, and if you've known, `Product` is a possible `req` (or a defined resource
+that you could query to the server).
+
+Here, the server resolves `req ProductList` to be
+`[req Product { id: 10 }, resp Product { id: 11 } = ...]`, which means that
+`resp ProductList` returned values that could be retrieved using the same `req` (see
+the `req Product`). We could send in a `req` message with the value from ProductList
+to get the Product as we wish.
+
+But the server could also opt in to send the "fetched" product as well, so the client
+won't need to do a `req` anymore (see the `resp Product`). Notice how the `resp`
+included the parameters needed to fetch the same data (`{ id: 11 }`). So, we could
+cache this `resp` as if we've did a `req` to it before! But doing it without any
+further requests to the server!
+
+A bit confused? Here's an example
+
+```
+-> req  ProductList {}
+<- resp ProductList {} = [req Product { id: 10 }, resp Product { id: 11 } = ...]
+
+ | the client cached the following:
+ |  - ProductList {}     = [Product { id: 10 }, Product { id: 11 }]
+ |  - Product { id: 11 } = ...
+
+ | notice how the client also cached `Product { id: 11 }` with the value provided by
+ | the 2nd value from the array of `ProductList`
+
+ | suppose the client wanted to see the 1st Product
+
+-> req  Product { id: 10 }
+<- resp Product { id: 10 } = ...
+
+ | the client cached the following:
+ |  - ProductList {}     = [Product { id: 10 }, Product { id: 11 }]
+ |  - Product { id: 11 } = ...
+ |  - Product { id: 10 } = ...
+
+ | nice isn't it?
+```
+
+Cool! You've just understood one of the cool principles of SEKUL.
 
 ## Background
 
