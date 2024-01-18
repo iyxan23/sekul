@@ -59,7 +59,7 @@ to be the opposite.
 
 Read more about the [`resp` message type here](#the-resp-message-type).
 
-#### Arguments
+#### Arguments in a `req`
 
 A `req` can have arguments in the form of a key-value store similar to how JSON functions.
 Its types are provided by the server in a [`ContextChange event`](#context-change-event).
@@ -71,7 +71,7 @@ Here's an example of requesting a product with a specific id.
 <- resp Product { id: 10 } = { title: "Plastic Bag", desc: "Just a plastic bag, nothing special", price: 1 }
 ```
 
-#### Idempotence & Caching
+#### Idempotence & Caching of a `req`
 
 The awesome thing about SEKUL is that resources and/or objects are cached by default.
 Each time a `req` is made, the client must store its corresponding `resp` object in a
@@ -104,14 +104,14 @@ Notice how req has the content `Product { id: 10 }` and resp has the same data, 
 it has "resolved" the resource which is indicated by the equal sign, followed by its
 resource's actual data.
 
-#### Caching
+#### Caching of a `resp`
 
-As we've discussed previously in [`req`'s Idempotence and Caching](#idempotence-and-caching),
+As we've discussed previously in [`req`'s Idempotence and Caching](#idempotence-caching-of-a-req),
 the indication that we've talked about not only mean that the server "resolved" the
 request that the client sent. But also a "cache key" for the client to save for later
 use.
 
-#### Payload
+#### Payload of a `resp`
 
 The payload of a `resp` message is similar to a `req`'s key-value store style, JSON-like
 structure. Though a `resp` could include some special values: `req`, `resp` and `disp`.
@@ -169,6 +169,30 @@ A bit confused? Here's an example
 ```
 
 Cool! You've just understood one of the cool principles of SEKUL.
+
+In summary, including a `req` object inside a `resp`'s content indicates an unfetched
+data but related to that "object". Including a `resp` inside a `resp`'s content
+basically prefetches it for the client, so the client wouldn't need to perform a `req`
+to know its value.
+
+Next up, we have a `disp` or a dispatch. Learn about dispatch [here](#the-disp-message-type).
+
+##### `disp` in `resp`
+
+Assuming you've read the next section ahead, 
+
+### The `disp` Message Type
+
+Unlike the previous `req` and `resp` message types, `disp` or dispatch is an **asynchronous**
+message type.
+
+Dispatch is similar to a regular req, but the difference is that the server does not give
+any exact response. It is asynchronous. Dispatches are usually used for actions that are
+performed by the user (the actual user) using the client. So things like clicking a button
+or moving their cursor around. Those actions should fire a dispatch to the server.
+
+Think of it more like a reverse-event, and the client is "emitting" an event to the server.
+It has a different name so its easier to differentiate one another.
 
 ## Background
 
