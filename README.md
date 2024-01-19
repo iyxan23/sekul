@@ -201,7 +201,7 @@ a child of a `Cart` resource. Here's an example:
  | argument named "id".
 ```
 
-I'm currently questioning whether this feature is useful or not.
+This feature is useful for `disp`, which we will later discuss.
 
 > I'm also thinking of an idea where we could reference the response's fields, not just
 > the arguments given on a `req`. So something like
@@ -224,6 +224,32 @@ I'm currently questioning whether this feature is useful or not.
 Assuming you've read the next section ahead about [`disp`](#the-disp-message-type), a `resp`'s
 response could also include a disp of which the client could "fire" to the server. You could say
 they work quite the same when compared to methods in OOP.
+
+The thing of how it works is similar to how a `resp` includes a `req`/`resp` in its contents.
+
+Here's an example:
+
+```
+-> req  CartItem { parent: "...", idx: 0 }
+<- resp CartItem { parent: "...", idx: 0 } = {
+             delete: disp DeleteCartItem { cartParent: args.parent, idx: args.idx },
+           }
+```
+
+The client could know what kind of dispatch to do what kind of action. It doesn't have to know
+the `disp`'s opcode or name, it could know that from a `resp`'s content (here, accessing the
+`delete` from the `resp` leads us to the disp that we needed to actually delete the `CartItem`).
+
+The client could just:
+
+```
+-> disp DeleteCartItem { ... }
+```
+
+And done, the cart is deleted.
+
+> Maybe also make deletion possible in caches? I haven't thought of that yet.
+> How can the client know that a CartItem got deleted? And how can it update its cache?
 
 #### Empty Parameters in a `req`/`disp` of a `resp`
 
