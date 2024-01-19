@@ -17,7 +17,7 @@ Currently there's only documentation form of work of how this protocol will actu
 look like and work. I am planning to create rust crates to run SEKUL over HTTP and
 WebSocket and also client libraries with wasm support. But that's for later~
 
-## Introduction
+# Introduction
 
 SEKUL uses a concept of **resources**, or **objects** in object-oriented fashion.
 
@@ -34,7 +34,7 @@ There are 4 types of messages in SEKUL:
 We will discuss them one-by-one, referencing to other types of messages as it is
 a bit circularly-dependent.
 
-### The `req` Message Type
+## The `req` Message Type
 
 The `req` message is basically a request. It's like the client asking for something
 to the server. In this doc, I will write `req` messages to be like this:
@@ -59,7 +59,7 @@ to be the opposite.
 
 Read more about the [`resp` message type here](#the-resp-message-type).
 
-#### Arguments in a `req`
+### Arguments in a `req`
 
 A `req` can have arguments in the form of a key-value store similar to how JSON functions.
 Its types are provided by the server in a [`ContextChange event`](#context-change-event).
@@ -71,7 +71,7 @@ Here's an example of requesting a product with a specific id.
 <- resp Product { id: 10 } = { title: "Plastic Bag", desc: "Just a plastic bag, nothing special", price: 1 }
 ```
 
-#### Idempotence & Caching of a `req`
+### Idempotence & Caching of a `req`
 
 The awesome thing about SEKUL is that resources and/or objects are cached by default.
 Each time a `req` is made, the client must store its corresponding `resp` object in a
@@ -87,7 +87,7 @@ Though, if the client needed to, it could send the same `req` even though it had
 it before (it must've cached it before), and the server should in turn response with
 the appropriate resource.
 
-### The `resp` Message Type
+## The `resp` Message Type
 
 The `resp` message type is a message sent by the server as a response to a
 [`req` message type](#the-req-message-type) from the client.
@@ -104,14 +104,14 @@ Notice how req has the content `Product { id: 10 }` and resp has the same data, 
 it has "resolved" the resource which is indicated by the equal sign, followed by its
 resource's actual data.
 
-#### Caching of a `resp`
+### Caching of a `resp`
 
 As we've discussed previously in [`req`'s Idempotence and Caching](#idempotence-caching-of-a-req),
 the indication that we've talked about not only mean that the server "resolved" the
 request that the client sent. But also a "cache key" for the client to save for later
 use.
 
-#### Payload of a `resp`
+### Payload of a `resp`
 
 The payload of a `resp` message is similar to a `req`'s key-value store style, JSON-like
 structure. Though a `resp` could include some special values: `req`, `resp` and `disp`.
@@ -175,13 +175,79 @@ data but related to that "object". Including a `resp` inside a `resp`'s content
 basically prefetches it for the client, so the client wouldn't need to perform a `req`
 to know its value.
 
-Next up, we have a `disp` or a dispatch. Learn about dispatch [here](#the-disp-message-type).
+#### Referencing an Argument
 
-##### `disp` in `resp`
+Sometimes a `req` that we get from a `resp` might be a "derivative" of the `resp`'s original
+`req`, where it might use its original original. For example, a `CartItem` resource that is
+a child of a `Cart` resource. Here's an example:
 
-Assuming you've read the next section ahead, 
+```
+-> req  Cart { id: "..." }
+<- resp Cart { id: "..." } = {
+            title: "...",
+            items: [
+              req CartItem {
+                parent: args.id,
+                idx: 0
+              },
+              req CartItem {
+                parent: args.id,
+                idx: 1
+              }
+            ]
+          }
 
-### The `disp` Message Type
+ | the client now knows that the `req CartItem` from resp `Cart` is correlated with `Cart`'s
+ | argument named "id".
+```
+
+I'm currently questioning whether this feature is useful or not.
+
+> I'm also thinking of an idea where we could reference the response's fields, not just
+> the arguments given on a `req`. So something like
+> 
+> ```
+> resp Cart { id: "..." } = {
+>          someId: "hey",
+>          items: [
+>            req CartItem {
+>              parent: .someId, // will reference the "hey"
+>              idx: 0
+>            }
+>          ]
+> ```
+>
+> But dunno if it actually is useful or not
+
+#### `disp` in `resp`
+
+Assuming you've read the next section ahead about [`disp`](#the-disp-message-type), a `resp`'s
+response could also include a disp of which the client could "fire" to the server. You could say
+they work quite the same when compared to methods in OOP.
+
+#### Empty Parameters in a `req`/`disp` of a `resp`
+
+We could define a parameter that shall be filled manually by the client when doing a `disp` or
+a `req`. This empty parameter is especially useful for `disp` messages. Here's an example:
+
+```
+-> req  Product { id: "..." }
+<- resp Product { id: "..." } = {
+            name: "Laptop",
+            desc: "A shiny laptop",
+            category: req Category { id: "..." },
+            changeCategory: disp ChangeCategory {
+              productId: args.id,
+              target(string)    // <- target is an empty parameter, the client must fill it by itself
+            },
+            rename: disp RenameProduct {
+              productId: args.id,
+              newName(string)    // <- target is an empty parameter, the client must fill it by itself
+            },
+         }
+```
+
+## The `disp` Message Type
 
 Unlike the previous `req` and `resp` message types, `disp` or dispatch is an **asynchronous**
 message type.
@@ -194,7 +260,7 @@ or moving their cursor around. Those actions should fire a dispatch to the serve
 Think of it more like a reverse-event, and the client is "emitting" an event to the server.
 It has a different name so its easier to differentiate one another.
 
-## Background
+# Background
 
 Well, lately my abandoned project named [`dalang`](https://github.com/iyxan23/dalang)
 took most of my braincells during my free time in my boarding school. I still had the
