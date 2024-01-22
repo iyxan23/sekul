@@ -205,7 +205,7 @@ This feature is useful for `disp`, which we will later discuss.
 
 > I'm also thinking of an idea where we could reference the response's fields, not just
 > the arguments given on a `req`. So something like
-> 
+>
 > ```
 > resp Cart { id: "..." } = {
 >          someId: "hey",
@@ -285,6 +285,60 @@ or moving their cursor around. Those actions should fire a dispatch to the serve
 
 Think of it more like a reverse-event, and the client is "emitting" an event to the server.
 It has a different name so its easier to differentiate one another.
+
+Here's how a `disp` looks like:
+
+```
+-> disp MoveFile { from: "/abc", to: "/def" }
+```
+
+It's quite straightforward. The only difference is that a disp usually does not have a
+response. Though, the server shall send [`event` messages](#the-ev-message-type) instead.
+
+## The `ev` Message Type
+
+An event message is an asynchronous message that comes from the server. It has a name and
+could include payloads. The server could send as much as it'd like, and the client could
+ignore or dismiss events as they like.
+
+```
+<- ev   Notification { title: "You've got mail!", description: "Something something" }
+<- ev   Notification { title: "New offer", description: "You got 99% off of something" }
+```
+
+### Special `ev`: Update Events (`evup`)
+
+One of the cool things about SEKUL is that both resources fetched using a `req` could
+react to changes in response to a special update event.
+
+```
+-> req  ProductList {}
+<- resp ProductList {} = [req Product { id: 1 }, req Product { id: 2 }]
+
+ | client cached the following:
+ |  - ProductList {} = [req Product { id: 1 }, req Product { id: 2 }]
+
+ | sometime later
+
+<- evup ProductList {} = [req Product { id: 1 }, req Product { id: 2 }, req Product { id: 3 }]
+
+ | client cached the following:
+ |  - ProductList {} = [req Product { id: 1 }, req Product { id: 2 }, req Product { id: 3 }]
+ |
+ | and the client would update the listing to reflect the update event.
+```
+
+An `evup` message's primary goal is to notify the client of changes in a resource.
+It could be anything, ranging from something like `req CurrentNote` of a note-taking app,
+where the user could dispatch something like `disp SelectNote` to change notes.
+
+# Further Features
+
+- [System API](./system-api.md)
+  - [Context API](./context-api.md)
+  - [Subscription API](./subscription-api.md)
+- [Layers of Architecture](./layers-of-architecture.md)
+- [Use Cases](./use-cases.md)
 
 # Background
 
